@@ -1,6 +1,7 @@
 #include "gemm.h"
 #include "utils.h"
 #include "im2col.h"
+#include "fixed_point.h"
 #include "dark_cuda.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,6 +45,7 @@ static inline int popcnt_64(uint64_t val64) {
 #define TILE_M 4 // 4 ops
 #define TILE_N 16 // AVX2 = 2 ops * 8 floats
 #define TILE_K 16 // loop
+#define DECIMALS 16
 #ifdef __cplusplus
 #define PUT_IN_REGISTER
 #else
@@ -774,7 +776,27 @@ void gemm_nn(int M, int N, int K, float ALPHA,
     }
 }
 
-
+// Fixed point implementation of gemm_nn
+void gemm_nn_fxp(int M, int N, int K, float ALPHA,
+    float *A, int lda,
+    float *B, int ldb,
+    float *C, int ldc)
+{
+    int i, j, k;
+	 fixed temp, c, new_c;
+    for (i = 0; i < M; ++i) {
+        for (k = 0; k < K; ++k) {
+            //PUT_IN_REGISTER float A_PART = ALPHA * A[i * lda + k];
+            for (j = 0; j < N; ++j) {
+                //C[i*ldc + j] += A_PART*B[k*ldb + j];
+                temp = convert_and_multiply(A[i*lda+k], B[k*ldb+j], integers, DECIMALS);
+                c = float_to_fixed(C[i*ldc + j], DECIMALS);
+                new_c = add_fixed(temp, c);
+                C[i*ldc + j] = fixed_to_float(new_c, DECIMALS);
+            }
+        }
+    }
+}
 
 void gemm_nn_fast(int M, int N, int K, float ALPHA,
     float *A, int lda,
