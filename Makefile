@@ -73,7 +73,13 @@ else
 CC=aarch64-linux-gnu-gcc
 endif
 
+ifeq ($(X86), 1)
+CC=gcc -std=c99
+CPP=g++
+else
 CPP=aarch64-linux-gnu-g++
+endif
+
 NVCC=nvcc
 OPTS=-Ofast
 LDFLAGS= -lm -pthread
