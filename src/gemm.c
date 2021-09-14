@@ -108,12 +108,22 @@ void time_random_matrix(int TA, int TB, int m, int k, int n)
 
 
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
-        float *A, int lda,
-        float *B, int ldb,
+        INTYPE *A, int lda,
+        INTYPE *B, int ldb,
         float BETA,
-        float *C, int ldc)
+        OUTTYPE *C, int ldc)
 {
-    gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
+    
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            OUTTYPE A_PART = A[i * lda + k];
+            for (int j = 0; j < N; ++j) {
+                C[i*ldc + j] += (A_PART*B[k*ldb + j]);// >> SHAMT;
+            }
+        }
+    }
+
+    //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 
 

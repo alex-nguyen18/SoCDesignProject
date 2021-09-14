@@ -89,10 +89,10 @@ void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, i
 
 
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
-                    float *A, int lda,
-                    float *B, int ldb,
+                    INTYPE *A, int lda,
+                    INTYPE *B, int ldb,
                     float BETA,
-                    float *C, int ldc);
+                    OUTTYPE *C, int ldc);
 
 void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         float *A, int lda,

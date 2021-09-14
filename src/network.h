@@ -132,7 +132,7 @@ float network_accuracy(network net, data d);
 float *network_accuracies(network net, data d, int n);
 float network_accuracy_multi(network net, data d, int n);
 void top_predictions(network net, int n, int *index);
-float *get_network_output(network net);
+OUTTYPE *get_network_output(network net);
 float *get_network_output_layer(network net, int i);
 float *get_network_delta_layer(network net, int i);
 float *get_network_delta(network net);

@@ -795,6 +795,7 @@ image make_image(int w, int h, int c)
 {
     image out = make_empty_image(w,h,c);
     out.data = (float*)xcalloc(h * w * c, sizeof(float));
+    out.fixeddata = (INTYPE*)xcalloc(h * w * c, sizeof(INTYPE)); 
     return out;
 }
 
@@ -1513,8 +1514,9 @@ image load_image_stb(char *filename, int channels)
             for(i = 0; i < w; ++i){
                 int dst_index = i + w*j + w*h*k;
                 int src_index = k + c*i + c*w*j;
-                im.data[dst_index] = (float)data[src_index]/255.;
-            }
+                im.data[dst_index] = (float)data[src_index]/255.;	
+                im.fixeddata[dst_index] = to_fixed(im.data[dst_index]);
+	    }
         }
     }
     free(data);

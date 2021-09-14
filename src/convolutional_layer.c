@@ -1236,9 +1236,11 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     {
         for (j = 0; j < l.groups; ++j)
         {
-            float *a = l.weights +j*l.nweights / l.groups;
-            float *b = state.workspace;
-            float *c = l.output +(i*l.groups + j)*n*m;
+            //float *a = l.weights +j*l.nweights / l.groups;
+            //float *b = state.workspace;
+	    INTYPE *a = l.weights +j*l.nweights / l.groups;
+            INTYPE *b = state.workspace;
+            OUTTYPE *c = l.output +(i*l.groups + j)*n*m;
 
             //gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
             //gemm_nn_custom(m, n, k, 1, a, k, b, n, c, n);
@@ -1367,7 +1369,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
             }
             else {
                 //printf(" l.index = %d - FP32 \n", l.index);
-                float *im = state.input + (i*l.groups + j)*(l.c / l.groups)*l.h*l.w;
+                INTYPE *im = state.input + (i*l.groups + j)*(l.c / l.groups)*l.h*l.w;
                 if (l.size == 1 && l.stride == 1 && l.dilation == 1) {
                     b = im;
                 }

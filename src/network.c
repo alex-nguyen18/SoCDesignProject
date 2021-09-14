@@ -280,7 +280,11 @@ void forward_network(network net, network_state state)
         l.forward(l, state);
         //printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
         state.input = l.output;
-
+	int n = l.n; 
+    	state.input = (INTYPE*) calloc(n, sizeof(INTYPE));
+    	for (int i = 0; i < n; i++){
+		state.input[i] = (l.output[i] >> SHAMT);
+    	}
         /*
         float avg_val = 0;
         int k;
@@ -304,7 +308,7 @@ void update_network(network net)
     }
 }
 
-float *get_network_output(network net)
+OUTTYPE *get_network_output(network net)
 {
 #ifdef GPU
     if (gpu_index >= 0) return get_network_output_gpu(net);
@@ -758,7 +762,7 @@ float *network_predict_ptr(network *net, float *input)
     return network_predict(*net, input);
 }
 
-float *network_predict(network net, float *input)
+float *network_predict(network net, int *input)
 {
 #ifdef GPU
     if(gpu_index >= 0)  return network_predict_gpu(net, input);
@@ -772,7 +776,12 @@ float *network_predict(network net, float *input)
     state.train = 0;
     state.delta = 0;
     forward_network(net, state);
-    float *out = get_network_output(net);
+    int n = net.layers[net.n-1].n; 
+    float *out = (float*) calloc(n, sizeof(float));
+    OUTTYPE *out_fixed = get_network_output(net);
+    for (int i = 0; i < n; i++){
+	out[i] = from_fixed(out_fixed[i]);
+    }
     return out;
 }
 

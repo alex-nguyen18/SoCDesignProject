@@ -2208,6 +2208,7 @@ void load_convolutional_weights(layer l, FILE *fp)
         }
     }
     read_bytes = fread(l.weights, sizeof(float), num, fp);
+    //USE THE FIXED POINT CONVERSION THINGY
     if (read_bytes > 0 && read_bytes < l.n) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
     //if(l.adam){
     //    fread(l.m, sizeof(float), num, fp);

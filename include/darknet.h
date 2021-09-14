@@ -15,6 +15,34 @@
 #include <stdint.h>
 #include <assert.h>
 #include <pthread.h>
+#include <inttypes.h>
+#include <math.h>
+
+#define INTYPE int16_t
+#define OUTTYPE int32_t
+
+#define MAXVALUEFIX (INT16_MAX)
+#define SHAMT (12)
+#define MAXVALUE ((float)MAXVALUEFIX * (1.0f / (1 << SHAMT)))
+
+inline INTYPE to_fixed(float in) {
+    int sign = in > 0 ? 1 : -1;
+    if (in > MAXVALUE) {
+        in = MAXVALUE;
+    } else if (in < -MAXVALUE) {
+        in = -MAXVALUE;
+    }
+    in = fabsf(in);
+
+    float scaled = in * ((1 << SHAMT));
+    return (INTYPE) (scaled * sign);
+}
+
+inline float from_fixed(OUTTYPE in) {
+    float f = in;
+    float scaled = f * (1.0f / (1 << (SHAMT * 2)));
+    return scaled;
+}
 
 #ifndef LIB_API
 #ifdef LIB_EXPORTS
@@ -422,6 +450,8 @@ struct layer {
     float *weights;
     float *weight_updates;
 
+    INTYPE *fixedweights;
+
     float scale_x_y;
     int objectness_smooth;
     int new_coords;
@@ -453,7 +483,7 @@ struct layer {
 
     float *col_image;
     float * delta;
-    float * output;
+    OUTTYPE * output;
     float * activation_input;
     int delta_pinned;
     int output_pinned;
@@ -839,7 +869,8 @@ typedef struct network {
 // network.h
 typedef struct network_state {
     float *truth;
-    float *input;
+    //float *input;
+    INTYPE *input;
     float *delta;
     float *workspace;
     int train;
@@ -863,6 +894,7 @@ typedef struct image {
     int h;
     int c;
     float *data;
+    INTYPE *fixeddata;
 } image;
 
 //typedef struct {
@@ -1030,7 +1062,8 @@ LIB_API void do_nms_obj(detection *dets, int total, int classes, float thresh);
 LIB_API void diounms_sort(detection *dets, int total, int classes, float thresh, NMS_KIND nms_kind, float beta1);
 
 // network.h
-LIB_API float *network_predict(network net, float *input);
+//LIB_API float *network_predict(network net, float *input);
+LIB_API float *network_predict(network net, int *input);
 LIB_API float *network_predict_ptr(network *net, float *input);
 LIB_API detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter);
 LIB_API det_num_pair* network_predict_batch(network *net, image im, int batch_size, int w, int h, float thresh, float hier, int *map, int relative, int letter);
