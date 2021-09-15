@@ -2421,7 +2421,7 @@ void transpose_block_SSE4x4(float *A, float *B, const int n, const int m,
         }
 }
 
-void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, int w, int h, int out_w, int out_h, int c,
+void forward_maxpool_layer_avx(const INTYPE *src, OUTTYPE *dst, int *indexes, int size, int w, int h, int out_w, int out_h, int c,
     int pad, int stride, int batch)
 {
     int b, k;
@@ -2435,7 +2435,7 @@ void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, i
             for (i = 0; i < out_h; ++i) {
                 for (j = 0; j < out_w; ++j) {
                     int out_index = j + out_w*(i + out_h*(k + c*b));
-                    float max = -FLT_MAX;
+                    INTYPE max = MINVALUEFIX;
                     int max_i = -1;
                     for (n = 0; n < size; ++n) {
                         for (m = 0; m < size; ++m) {
@@ -2444,12 +2444,13 @@ void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, i
                             int index = cur_w + w*(cur_h + h*(k + b*c));
                             int valid = (cur_h >= 0 && cur_h < h &&
                                 cur_w >= 0 && cur_w < w);
-                            float val = (valid != 0) ? src[index] : -FLT_MAX;
+                            //printf("%p %i\n", src, index);
+                            INTYPE val = (valid != 0) ? src[index] : MINVALUEFIX;
                             max_i = (val > max) ? index : max_i;
                             max = (val > max) ? val : max;
                         }
                     }
-                    dst[out_index] = max;
+                    dst[out_index] = max << SHAMT;
                     if (indexes) indexes[out_index] = max_i;
                 }
             }

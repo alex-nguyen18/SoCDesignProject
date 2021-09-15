@@ -139,6 +139,8 @@ set(INSTALL_LIB_DIR      "${CMAKE_CURRENT_LIST_DIR}" CACHE PATH "Path where lib 
 set(INSTALL_INCLUDE_DIR  "include/darknet"           CACHE PATH "Path where headers will be installed")
 set(INSTALL_CMAKE_DIR    "share/darknet"             CACHE PATH "Path where cmake configs will be installed")
 
+set(ENABLE_CUDA false)
+
 if(ENABLE_CUDA)
   include(CheckLanguage)
   check_language(CUDA)
