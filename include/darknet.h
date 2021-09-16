@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include <assert.h>
 #include <pthread.h>
+#include <math.h>
+#include <inttypes.h>
 
 #ifndef LIB_API
 #ifdef LIB_EXPORTS
@@ -32,6 +34,32 @@
 #endif
 #endif
 
+#define INTYPE int32_t
+#define OUTTYPE int32_t
+
+#define MAXVALUEFIX (INT32_MAX)
+#define SHAMT (12)
+#define MAXVALUE ((float)MAXVALUEFIX * (1.0f / (1 << SHAMT)))
+// SHAMT = log2()
+
+inline INTYPE to_fixed(float in) {
+    int sign = in > 0 ? 1 : -1;
+    if (in > MAXVALUE) {
+        in = MAXVALUE;
+    } else if (in < -MAXVALUE) {
+        in = -MAXVALUE;
+    }
+    in = fabsf(in);
+
+    float scaled = in * ((1 << SHAMT));
+    return (INTYPE) (scaled * sign);
+}
+
+inline float from_fixed(OUTTYPE in) {
+    float f = in;
+    float scaled = f * (1.0f / (1 << (SHAMT * 2)));
+    return scaled;
+}
 #define SECRET_NUM -1234
 
 typedef enum { UNUSED_DEF_VAL } UNUSED_ENUM_TYPE;

@@ -1,7 +1,6 @@
 #include "gemm.h"
 #include "utils.h"
 #include "im2col.h"
-#include "fixed_point.h"
 #include "dark_cuda.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -115,7 +114,58 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
         float BETA,
         float *C, int ldc)
 {
-    gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
+    assert(K == lda);
+    assert(N == ldb);
+    assert(N == ldc);
+    assert(ALPHA == 1.0);
+
+    INTYPE *Af, *Bf;
+    OUTTYPE *Cf;
+    Af = malloc(M * K * sizeof(INTYPE));
+    Bf = malloc(K * N * sizeof(INTYPE));
+    Cf = calloc(M * N, sizeof(OUTTYPE));
+    assert(Af && Bf && Cf);
+
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            Af[i * lda + k] = to_fixed(A[i * lda + k]);
+//#ifdef DEBUG
+//            printf("A %i %i %f -> %i \n", i, k, A[i * lda + k], Af[i * lda + k]);
+//#endif
+        }
+    }
+    for (int k = 0; k < K; ++k) {
+        for (int j = 0; j < N; ++j) {
+            Bf[k*ldb + j] = to_fixed(B[k*ldb + j]);
+//#ifdef DEBUG
+//            printf("B %i %i %f -> %i \n", k, j, B[k*ldb + j], Bf[k*ldb + j]);
+//#endif
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            OUTTYPE A_PART = Af[i * lda + k];
+            for (int j = 0; j < N; ++j) {
+                Cf[i*ldc + j] += (A_PART*Bf[k*ldb + j]);// >> SHAMT;
+            }
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            C[i*ldc + j] = from_fixed(Cf[i * ldc  + j]);
+//#ifdef DEBUG
+//            printf("C %i %i %i -> %f \n", i, j, Cf[i * ldc  + j], C[i*ldc + j]);
+//#endif
+        }
+    }
+
+    free(Af);
+    free(Bf);
+    free(Cf);
+
+    //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 
 
