@@ -39,6 +39,18 @@ inline INTYPE to_fixed(float in) {
     return (INTYPE) (scaled * sign);
 }
 
+inline OUTTYPE fixed_grow(INTYPE in) {
+    return ((OUTTYPE) in) << SHAMT;
+}
+
+inline INTYPE fixed_shrink(OUTTYPE in) {
+    return (INTYPE)(in >> SHAMT);
+}
+
+inline OUTTYPE to_fixed_out(float in) {
+    return fixed_grow(to_fixed(in));
+}
+
 inline float from_fixed(OUTTYPE in) {
     float f = in;
     float scaled = f * (1.0f / (1 << (SHAMT * 2)));
