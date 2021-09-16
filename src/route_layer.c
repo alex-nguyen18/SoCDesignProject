@@ -83,12 +83,15 @@ void forward_route_layer(const route_layer l, network_state state)
     int offset = 0;
     for(i = 0; i < l.n; ++i){
         int index = l.input_layers[i];
-        float *input = state.net.layers[index].output;
+        OUTTYPE *input = state.net.layers[index].output;
         int input_size = l.input_sizes[i];
         int part_input_size = input_size / l.groups;
         for(j = 0; j < l.batch; ++j){
             //copy_cpu(input_size, input + j*input_size, 1, l.output + offset + j*l.outputs, 1);
-            copy_cpu(part_input_size, input + j*input_size + part_input_size*l.group_id, 1, l.output + offset + j*l.outputs, 1);
+            //copy_cpu(part_input_size, input + j*input_size + part_input_size*l.group_id, 1, l.output + offset + j*l.outputs, 1);
+            for (int ii = 0; ii < part_input_size; ++ii) {
+                *(l.output + offset + j*l.outputs) = *(input + j*input_size + part_input_size*l.group_id);
+            }
         }
         //offset += input_size;
         offset += part_input_size;

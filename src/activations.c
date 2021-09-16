@@ -112,9 +112,10 @@ float activate(float x, ACTIVATION a)
     return 0;
 }
 
-void activate_array(float *x, const int n, const ACTIVATION a)
+void activate_array(OUTTYPE *x, const int n, const ACTIVATION a)
 {
     int i;
+    assert(a == LOGISTIC);
     if (a == LINEAR) {}
     else if (a == LEAKY) {
         #pragma omp parallel for
@@ -125,7 +126,7 @@ void activate_array(float *x, const int n, const ACTIVATION a)
     else if (a == LOGISTIC) {
         #pragma omp parallel for
         for (i = 0; i < n; ++i) {
-            x[i] = logistic_activate(x[i]);
+            x[i] = to_fixed(logistic_activate((from_fixed(x[i])))) << SHAMT;
         }
     }
     else {

@@ -244,6 +244,7 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
 {
     if (l.maxpool_depth)
     {
+        assert(false);
         int b, i, j, k, g;
         for (b = 0; b < l.batch; ++b) {
             #pragma omp parallel for

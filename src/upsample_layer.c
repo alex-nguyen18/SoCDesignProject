@@ -26,7 +26,7 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.outputs = l.out_w*l.out_h*l.out_c;
     l.inputs = l.w*l.h*l.c;
     l.delta = (float*)xcalloc(l.outputs * batch, sizeof(float));
-    l.output = (float*)xcalloc(l.outputs * batch, sizeof(float));
+    l.output = (OUTTYPE*)xcalloc(l.outputs * batch, sizeof(OUTTYPE));
 
     l.forward = forward_upsample_layer;
     l.backward = backward_upsample_layer;
@@ -55,7 +55,7 @@ void resize_upsample_layer(layer *l, int w, int h)
     l->outputs = l->out_w*l->out_h*l->out_c;
     l->inputs = l->h*l->w*l->c;
     l->delta = (float*)xrealloc(l->delta, l->outputs * l->batch * sizeof(float));
-    l->output = (float*)xrealloc(l->output, l->outputs * l->batch * sizeof(float));
+    l->output = (OUTTYPE*)xrealloc(l->output, l->outputs * l->batch * sizeof(OUTTYPE));
 
 #ifdef GPU
     cuda_free(l->output_gpu);
@@ -68,11 +68,12 @@ void resize_upsample_layer(layer *l, int w, int h)
 
 void forward_upsample_layer(const layer l, network_state net)
 {
-    fill_cpu(l.outputs*l.batch, 0, l.output, 1);
+    fill_cpu_fixed(l.outputs*l.batch, 0, l.output, 1);
     if(l.reverse){
-        upsample_cpu(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, l.scale, net.input);
+        assert(false);
+        upsample_cpu_fixed(l.output, l.out_w, l.out_h, l.c, l.batch, l.stride, 0, l.scale, net.input);
     }else{
-        upsample_cpu(net.input, l.w, l.h, l.c, l.batch, l.stride, 1, l.scale, l.output);
+        upsample_cpu_fixed(net.input, l.w, l.h, l.c, l.batch, l.stride, 1, to_fixed(l.scale), l.output);
     }
 }
 

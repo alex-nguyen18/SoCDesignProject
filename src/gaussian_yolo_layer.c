@@ -794,7 +794,10 @@ void avg_flipped_gaussian_yolo(layer l)
 int get_gaussian_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter)
 {
     int i,j,n;
-    float *predictions = l.output;
+    float *predictions = (float*) calloc(l.outputs, sizeof (float));
+    for (i = 0; i < l.outputs; ++i) {
+        predictions[i] = from_fixed(l.output[i]);
+    }
     //if (l.batch == 2) avg_flipped_gaussian_yolo(l);
     int count = 0;
     for (i = 0; i < l.w*l.h; ++i){
@@ -821,8 +824,8 @@ int get_gaussian_yolo_detections(layer l, int w, int h, int netw, int neth, floa
 
                 for (j = 0; j < l.classes; ++j) {
                     int class_index = entry_gaussian_index(l, 0, n*l.w*l.h + i, 9 + j);
-                    float uc_aver = (dets[count].uc[0] + dets[count].uc[1] + dets[count].uc[2] + dets[count].uc[3]) / 4.0;
-                    float prob = objectness*predictions[class_index] * (1.0 - uc_aver);
+                    float uc_aver = (dets[count].uc[0] + dets[count].uc[1] + dets[count].uc[2] + dets[count].uc[3]) / 4.0f;
+                    float prob = objectness*predictions[class_index] * (1.0f- uc_aver);
                     dets[count].prob[j] = (prob > thresh) ? prob : 0;
                 }
                 ++count;

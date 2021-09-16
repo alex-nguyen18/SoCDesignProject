@@ -50,7 +50,7 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, int *mask, int 
     for (i = 0; i < batch * l.w*l.h*l.n; ++i) l.class_ids[i] = -1;
 
     l.delta = (float*)xcalloc(batch * l.outputs, sizeof(float));
-    l.output = (float*)xcalloc(batch * l.outputs, sizeof(float));
+    l.output = (OUTTYPE*)xcalloc(batch * l.outputs, sizeof(OUTTYPE));
     for(i = 0; i < total*2; ++i){
         l.biases[i] = .5;
     }
@@ -664,7 +664,10 @@ void *process_batch(void* ptr)
 void forward_yolo_layer(const layer l, network_state state)
 {
     //int i, j, b, t, n;
-    memcpy(l.output, state.input, l.outputs*l.batch * sizeof(float));
+    for (int i = 0; i < l.outputs * l.batch; ++i) {
+        l.output[i] = state.input[i] << SHAMT;
+    }
+    //memcpy(l.output, state.input, l.outputs*l.batch * sizeof(float));
     int b, n;
 
 #ifndef GPU
@@ -679,7 +682,9 @@ void forward_yolo_layer(const layer l, network_state state)
                 int obj_index = entry_index(l, b, n*l.w*l.h, 4);
                 activate_array(l.output + obj_index, (1 + l.classes)*l.w*l.h, LOGISTIC);
             }
-            scal_add_cpu(2 * l.w*l.h, l.scale_x_y, -0.5*(l.scale_x_y - 1), l.output + bbox_index, 1);    // scale x,y
+            INTYPE alpha = to_fixed(l.scale_x_y);
+            OUTTYPE beta = to_fixed(-0.5f*(l.scale_x_y - 1)) << SHAMT;
+            scal_add_cpu_fixed(2 * l.w*l.h, alpha, beta, l.output + bbox_index, 1);    // scale x,y
         }
     }
 #endif
@@ -1090,7 +1095,10 @@ int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh,
 {
     //printf("\n l.batch = %d, l.w = %d, l.h = %d, l.n = %d \n", l.batch, l.w, l.h, l.n);
     int i,j,n;
-    float *predictions = l.output;
+    float *predictions = (float*) calloc(l.outputs, sizeof (float));
+    for (i = 0; i < l.outputs; ++i) {
+        predictions[i] = from_fixed(l.output[i]);
+    }
     // This snippet below is not necessary
     // Need to comment it in order to batch processing >= 2 images
     //if (l.batch == 2) avg_flipped_yolo(l);

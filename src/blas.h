@@ -29,7 +29,9 @@ void axpy_cpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY);
 void copy_cpu(int N, float *X, int INCX, float *Y, int INCY);
 void scal_cpu(int N, float ALPHA, float *X, int INCX);
 void scal_add_cpu(int N, float ALPHA, float BETA, float *X, int INCX);
+void scal_add_cpu_fixed(int N, INTYPE ALPHA, OUTTYPE BETA, OUTTYPE *X, int INCX);
 void fill_cpu(int N, float ALPHA, float * X, int INCX);
+void fill_cpu_fixed(int N, float ALPHA, OUTTYPE * X, int INCX);
 float dot_cpu(int N, float *X, int INCX, float *Y, int INCY);
 void test_gpu_blas();
 void shortcut_cpu(int batch, int w1, int h1, int c1, float *add, int w2, int h2, int c2, float *out);
@@ -54,6 +56,7 @@ void weighted_sum_cpu(float *a, float *b, float *s, int num, float *c);
 
 void softmax(float *input, int n, float temp, float *output, int stride);
 void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int forward, float scale, float *out);
+void upsample_cpu_fixed(INTYPE *in, int w, int h, int c, int batch, int stride, int forward, INTYPE scale, OUTTYPE *out);
 void softmax_cpu(float *input, int n, int batch, int batch_offset, int groups, int group_offset, int stride, float temp, float *output);
 void softmax_x_ent_cpu(int n, float *pred, float *truth, float *delta, float *error);
 void constrain_cpu(int size, float ALPHA, float *X);

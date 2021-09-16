@@ -1213,7 +1213,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     int out_w = convolutional_out_width(l);
     int i, j;
 
-    fill_cpu(l.outputs*l.batch, 0, l.output, 1);
+    fill_cpu_fixed(l.outputs*l.batch, 0, l.output, 1);
 
     int m = l.n / l.groups;
     int k = l.size*l.size*l.c / l.groups;

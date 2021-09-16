@@ -1677,7 +1677,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         //for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)xcalloc(l.classes, sizeof(float));
 
         //float *X = sized.data;
-	INTYPE *X = sized.fixeddata;
+	    INTYPE *X = sized.fixeddata;
 
         //time= what_time_is_it_now();
         double time = get_time_point();

@@ -21,7 +21,7 @@ void gradient_array(const float *x, const int n, const ACTIVATION a, float *delt
 void gradient_array_swish(const float *x, const int n, const float * sigmoid, float * delta);
 void gradient_array_mish(const int n, const float * activation_input, float * delta);
 void gradient_array_hard_mish(const int n, const float * activation_input, float * delta);
-void activate_array(float *x, const int n, const ACTIVATION a);
+void activate_array(OUTTYPE *x, const int n, const ACTIVATION a);
 void activate_array_swish(float *x, const int n, float * output_sigmoid, float * output);
 void activate_array_mish(float *x, const int n, float * activation_input, float * output);
 void activate_array_hard_mish(float *x, const int n, float * activation_input, float * output);

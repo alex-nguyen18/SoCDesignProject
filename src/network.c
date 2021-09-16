@@ -278,9 +278,9 @@ void forward_network(network net, network_state state)
         }
         //double time = get_time_point();
         l.forward(l, state);
-        //printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
-        int sz = l.out_h * l.out_w * l.out_c;
-        assert(sz == l.outputs);
+        //printf("%d - Predicted in %lf mili-seconds.\n", i, ((double)get_time_point() - time) / 1000);
+        int sz = l.out_h * l.out_w * l.out_c * l.batch;
+        assert(sz == l.outputs * l.batch);
         //printf("%i %i %i\n", l.n, l.h, l.w);
     	state.input = (INTYPE*) calloc(sz, sizeof(INTYPE));
         for (int j = 0; j < sz; j++){
@@ -777,13 +777,8 @@ float *network_predict(network net, INTYPE *input)
     state.train = 0;
     state.delta = 0;
     forward_network(net, state);
-    int n = net.layers[net.n-1].n; 
-    float *out = (float*) calloc(n, sizeof(float));
-    OUTTYPE *out_fixed = get_network_output(net);
-    for (int i = 0; i < n; i++){
-        out[i] = from_fixed(out_fixed[i]);
-    }
-    return out;
+    int n = net.layers[net.n-1].n;
+    return NULL;
 }
 
 int num_detections(network *net, float thresh)

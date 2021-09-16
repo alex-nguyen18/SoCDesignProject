@@ -2445,9 +2445,13 @@ void forward_maxpool_layer_avx(const INTYPE *src, OUTTYPE *dst, int *indexes, in
                             int valid = (cur_h >= 0 && cur_h < h &&
                                 cur_w >= 0 && cur_w < w);
                             //printf("%p %i\n", src, index);
-                            INTYPE val = (valid != 0) ? src[index] : MINVALUEFIX;
-                            max_i = (val > max) ? index : max_i;
-                            max = (val > max) ? val : max;
+                            if (valid != 0 && src[index] > max) {
+                                max_i = index;
+                                max = src[index];
+                            }
+                            //INTYPE val = (valid != 0) ? src[index] : MINVALUEFIX;
+                            //max_i = (val > max) ? index : max_i;
+                            //max = (val > max) ? val : max;
                         }
                     }
                     dst[out_index] = max << SHAMT;

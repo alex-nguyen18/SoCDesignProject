@@ -331,11 +331,28 @@ void scal_add_cpu(int N, float ALPHA, float BETA, float *X, int INCX)
     for (i = 0; i < N; ++i) X[i*INCX] = X[i*INCX] * ALPHA + BETA;
 }
 
+void scal_add_cpu_fixed(int N, INTYPE ALPHA, OUTTYPE BETA, OUTTYPE *X, int INCX)
+{
+    int i;
+    for (i = 0; i < N; ++i) X[i*INCX] = ((INTYPE)(X[i*INCX] >> SHAMT)) * ALPHA + BETA;
+}
+
 void fill_cpu(int N, float ALPHA, float *X, int INCX)
 {
     int i;
     if (INCX == 1 && ALPHA == 0) {
         memset(X, 0, N * sizeof(float));
+    }
+    else {
+        for (i = 0; i < N; ++i) X[i*INCX] = ALPHA;
+    }
+}
+
+void fill_cpu_fixed(int N, float ALPHA, OUTTYPE *X, int INCX)
+{
+    int i;
+    if (INCX == 1 && ALPHA == 0) {
+        memset(X, 0, N * sizeof(OUTTYPE));
     }
     else {
         for (i = 0; i < N; ++i) X[i*INCX] = ALPHA;
@@ -481,6 +498,24 @@ void softmax_cpu(float *input, int n, int batch, int batch_offset, int groups, i
 }
 
 void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int forward, float scale, float *out)
+{
+    int i, j, k, b;
+    for (b = 0; b < batch; ++b) {
+        for (k = 0; k < c; ++k) {
+            for (j = 0; j < h*stride; ++j) {
+                for (i = 0; i < w*stride; ++i) {
+                    int in_index = b*w*h*c + k*w*h + (j / stride)*w + i / stride;
+                    int out_index = b*w*h*c*stride*stride + k*w*h*stride*stride + j*w*stride + i;
+                    if (forward) out[out_index] = scale*in[in_index];
+                    else in[in_index] += scale*out[out_index];
+                }
+            }
+        }
+    }
+}
+
+
+void upsample_cpu_fixed(INTYPE *in, int w, int h, int c, int batch, int stride, int forward, INTYPE scale, OUTTYPE *out)
 {
     int i, j, k, b;
     for (b = 0; b < batch; ++b) {
