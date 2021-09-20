@@ -475,6 +475,7 @@ struct layer {
     float *weight_updates;
 
     INTYPE *fixedweights;
+    OUTTYPE *fixedbiases;
 
     float scale_x_y;
     int objectness_smooth;

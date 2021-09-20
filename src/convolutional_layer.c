@@ -994,7 +994,7 @@ void set_specified_workspace_limit(convolutional_layer *l, size_t workspace_size
 #endif  // CUDNN
 }
 
-void add_bias(float *output, float *biases, int batch, int n, int size)
+void add_bias(OUTTYPE *output, OUTTYPE *biases, int batch, int n, int size)
 {
     int i,j,b;
     for(b = 0; b < batch; ++b){
@@ -1229,7 +1229,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
         {
             //float *a = l.weights +j*l.nweights / l.groups;
             //float *b = state.workspace;
-	    INTYPE *a = l.fixedweights +j*l.nweights / l.groups;
+	        INTYPE *a = l.fixedweights +j*l.nweights / l.groups;
             INTYPE *b = state.workspace;
             OUTTYPE *c = l.output +(i*l.groups + j)*n*m;
 
@@ -1267,7 +1267,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
         forward_batchnorm_layer(l, state);
     }
     else {
-        add_bias(l.output, l.biases, l.batch, l.n, out_h*out_w);
+        add_bias(l.output, l.fixedbiases, l.batch, l.n, out_h*out_w);
     }
 
     //activate_array(l.output, m*n*l.batch, l.activation);
