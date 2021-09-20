@@ -66,7 +66,8 @@ static inline float elu_activate(float x){return (x >= 0)*x + (x < 0)*(expf(x)-1
 static inline float selu_activate(float x) { return (x >= 0)*1.0507f*x + (x < 0)*1.0507f*1.6732f*(expf(x) - 1); }
 static inline float relie_activate(float x){return (x>0) ? x : .01f*x;}
 static inline float ramp_activate(float x){return x*(x>0)+.1f*x;}
-static inline float leaky_activate(float x){return (x>0) ? x : .1f*x;}
+//static inline float leaky_activate(float x){return (x>0) ? x : .1f*x;}
+static inline OUTTYPE leaky_activate(OUTTYPE x){return (x>0) ? x : ACTIVATION_SLOPE*x;}
 //static inline float tanh_activate(float x){return (expf(2*x)-1)/(expf(2*x)+1);}
 static inline float tanh_activate(float x) { return (2 / (1 + expf(-2 * x)) - 1); }
 static inline float gelu_activate(float x) { return (0.5*x*(1 + tanhf(0.797885*x + 0.035677*powf(x, 3)))); }

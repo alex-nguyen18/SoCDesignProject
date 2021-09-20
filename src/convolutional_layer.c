@@ -561,6 +561,7 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
     }
     else {
         l.weights = (float*)xcalloc(l.nweights, sizeof(float));
+        l.fixedweights = (float*)xcalloc(l.nweights, sizeof(INTYPE));
         l.biases = (float*)xcalloc(n, sizeof(float));
 
         if (train) {
@@ -1228,7 +1229,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
         {
             //float *a = l.weights +j*l.nweights / l.groups;
             //float *b = state.workspace;
-	        INTYPE *a = l.weights +j*l.nweights / l.groups;
+	    INTYPE *a = l.fixedweights +j*l.nweights / l.groups;
             INTYPE *b = state.workspace;
             OUTTYPE *c = l.output +(i*l.groups + j)*n*m;
 

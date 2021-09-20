@@ -23,7 +23,18 @@
 
 #define MAXVALUEFIX ((INTYPE)INT16_MAX)
 #define MINVALUEFIX ((INTYPE)INT16_MIN)
+//#define SHAMT (10)
+//#define ACTIVATION_SLOPE 52429 //if we change SHAMT, we need to change this as well
+
 #define SHAMT (12)
+#define ACTIVATION_SLOPE 838861 //if we change SHAMT, we need to change this as well
+
+//#define SHAMT (8)
+//#define ACTIVATION_SLOPE 3277 //if we change SHAMT, we need to change this as well
+
+//#define SHAMT (11)
+//#define ACTIVATION_SLOPE 209715 //if we change SHAMT, we need to change this as well
+
 #define MAXVALUE ((float)MAXVALUEFIX * (1.0f / (1 << SHAMT)))
 
 inline INTYPE to_fixed(float in) {

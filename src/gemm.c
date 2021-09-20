@@ -1766,7 +1766,7 @@ void im2col_cpu_custom_bin(float* data_im,
     }
 }
 
-
+/*
 void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
 {
     int i = 0;
@@ -1800,7 +1800,7 @@ void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
             x[i] = activate(x[i], a);
         }
     }
-}
+}*/
 
 void float_to_bit(float *src, unsigned char *dst, size_t size)
 {
@@ -2341,7 +2341,7 @@ void im2col_cpu_custom_bin(float* data_im,
 }
 
 
-void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
+void activate_array_cpu_custom(OUTTYPE *x, const int n, const ACTIVATION a)
 {
     int i;
     if (a == LINEAR)
@@ -2350,7 +2350,7 @@ void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
     else if (a == LEAKY)
     {
         for (i = 0; i < n; ++i) {
-            x[i] = (x[i]>0) ? x[i] : .1*x[i];
+            x[i] = (x[i]>0) ? x[i] : ACTIVATION_SLOPE*x[i];
         }
     }
     else {
