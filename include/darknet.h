@@ -38,7 +38,7 @@
 #define MAXVALUE ((float)MAXVALUEFIX * (1.0f / (1 << SHAMT)))
 
 inline INTYPE to_fixed(float in) {
-    int sign = in > 0 ? 1 : -1;
+    float sign = in > 0 ? 1.0f : -1.0f;
     if (in > MAXVALUE) {
         in = MAXVALUE;
     } else if (in < -MAXVALUE) {
@@ -63,7 +63,7 @@ inline OUTTYPE to_fixed_out(float in) {
 }
 
 inline float from_fixed(OUTTYPE in) {
-    float f = in;
+    float f = (float) in;
     float scaled = f * (1.0f / (1 << (SHAMT * 2)));
     return scaled;
 }
