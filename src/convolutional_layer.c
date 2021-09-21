@@ -561,8 +561,9 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
     }
     else {
         l.weights = (float*)xcalloc(l.nweights, sizeof(float));
-        l.fixedweights = (float*)xcalloc(l.nweights, sizeof(INTYPE));
+        l.fixedweights = (INTYPE*)xcalloc(l.nweights, sizeof(INTYPE));
         l.biases = (float*)xcalloc(n, sizeof(float));
+        l.fixedbiases = (OUTTYPE*)xcalloc(l.nweights, sizeof(OUTTYPE));
 
         if (train) {
             l.weight_updates = (float*)xcalloc(l.nweights, sizeof(float));
