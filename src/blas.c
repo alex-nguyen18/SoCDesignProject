@@ -282,14 +282,15 @@ void variance_cpu(float *x, float *mean, int batch, int filters, int spatial, fl
     }
 }
 
-void normalize_cpu(float *x, float *mean, float *variance, int batch, int filters, int spatial)
+void normalize_cpu(OUTTYPE *x, float *mean, float *variance, int batch, int filters, int spatial)
 {
     int b, f, i;
     for(b = 0; b < batch; ++b){
         for(f = 0; f < filters; ++f){
             for(i = 0; i < spatial; ++i){
                 int index = b*filters*spatial + f*spatial + i;
-                x[index] = (x[index] - mean[f])/(sqrt(variance[f] + .00001f));
+                //x[index] = (x[index] - mean[f])/(sqrt(variance[f] + .00001f));
+                x[index] = fixed_shrink(x[index] - to_fixed_out(mean[f])) * to_fixed(sqrtf(variance[f] + .00001f));
             }
         }
     }

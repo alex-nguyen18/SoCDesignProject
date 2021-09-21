@@ -591,7 +591,7 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
     l.inputs = l.w * l.h * l.c;
     l.activation = activation;
 
-    l.output = (float*)xcalloc(total_batch*l.outputs, sizeof(float));
+    l.output = (OUTTYPE*)xcalloc(total_batch*l.outputs, sizeof(OUTTYPE));
 #ifndef GPU
     if (train) l.delta = (float*)xcalloc(total_batch*l.outputs, sizeof(float));
 #endif  // not GPU
@@ -1273,12 +1273,12 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     }
 
     //activate_array(l.output, m*n*l.batch, l.activation);
-    if (l.activation == SWISH) activate_array_swish(l.output, l.outputs*l.batch, l.activation_input, l.output);
-    else if (l.activation == MISH) activate_array_mish(l.output, l.outputs*l.batch, l.activation_input, l.output);
-    else if (l.activation == HARD_MISH) activate_array_hard_mish(l.output, l.outputs*l.batch, l.activation_input, l.output);
-    else if (l.activation == NORM_CHAN) activate_array_normalize_channels(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output);
-    else if (l.activation == NORM_CHAN_SOFTMAX) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 0);
-    else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
+    if (l.activation == SWISH) assert(false);//activate_array_swish(l.output, l.outputs*l.batch, l.activation_input, l.output);
+    else if (l.activation == MISH) assert(false);//activate_array_mish(l.output, l.outputs*l.batch, l.activation_input, l.output);
+    else if (l.activation == HARD_MISH) assert(false);//activate_array_hard_mish(l.output, l.outputs*l.batch, l.activation_input, l.output);
+    else if (l.activation == NORM_CHAN) assert(false);//activate_array_normalize_channels(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output);
+    else if (l.activation == NORM_CHAN_SOFTMAX) assert(false);//activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 0);
+    else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) assert(false);//activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
     else activate_array_cpu_custom(l.output, l.outputs*l.batch, l.activation);
 
     if(l.binary || l.xnor) swap_binary(&l);
@@ -1289,6 +1289,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     if(l.assisted_excitation && state.train) assisted_excitation_forward(l, state);
 
     if (l.antialiasing) {
+        assert(false);// not supported
         network_state s = { 0 };
         s.train = state.train;
         s.workspace = state.workspace;
@@ -1410,6 +1411,7 @@ void assisted_excitation_forward(convolutional_layer l, network_state state)
 
 void backward_convolutional_layer(convolutional_layer l, network_state state)
 {
+    assert(false);//
     int i, j;
     int m = l.n / l.groups;
     int n = l.size*l.size*l.c / l.groups;
