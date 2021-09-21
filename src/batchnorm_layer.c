@@ -189,23 +189,11 @@ void forward_batchnorm_layer(layer l, network_state state)
         l.out_c = l.outputs;
         l.out_h = l.out_w = 1;
     }
-    if(state.train){
-        mean_cpu(l.output, l.batch, l.out_c, l.out_h*l.out_w, l.mean);
-        variance_cpu(l.output, l.mean, l.batch, l.out_c, l.out_h*l.out_w, l.variance);
-
-        scal_cpu(l.out_c, .9, l.rolling_mean, 1);
-        axpy_cpu(l.out_c, .1, l.mean, 1, l.rolling_mean, 1);
-        scal_cpu(l.out_c, .9, l.rolling_variance, 1);
-        axpy_cpu(l.out_c, .1, l.variance, 1, l.rolling_variance, 1);
-
-        copy_cpu(l.outputs*l.batch, l.output, 1, l.x, 1);
-        normalize_cpu(l.output, l.mean, l.variance, l.batch, l.out_c, l.out_h*l.out_w);
-        copy_cpu(l.outputs*l.batch, l.output, 1, l.x_norm, 1);
-    } else {
+    {
         normalize_cpu(l.output, l.rolling_mean, l.rolling_variance, l.batch, l.out_c, l.out_h*l.out_w);
     }
-    scale_bias(l.output, l.scales, l.batch, l.out_c, l.out_h*l.out_w);
-    add_bias(l.output, l.biases, l.batch, l.out_c, l.out_w*l.out_h);
+    scale_bias(l.output, l.fixedscales, l.batch, l.out_c, l.out_h*l.out_w);
+    add_bias(l.output, l.fixedbiases, l.batch, l.out_c, l.out_w*l.out_h);
 }
 
 void backward_batchnorm_layer(const layer l, network_state state)

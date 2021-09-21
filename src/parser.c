@@ -2190,6 +2190,9 @@ void load_convolutional_weights(layer l, FILE *fp)
     if (l.batch_normalize && (!l.dontloadscales)){
         read_bytes = fread(l.scales, sizeof(float), l.n, fp);
         if (read_bytes > 0 && read_bytes < l.n) printf("\n Warning: Unexpected end of wights-file! l.scales - l.index = %d \n", l.index);
+        for (int i = 0; i < l.n; i++){
+            l.fixedscales[i] = to_fixed(l.scales[i]);
+        }
         read_bytes = fread(l.rolling_mean, sizeof(float), l.n, fp);
         if (read_bytes > 0 && read_bytes < l.n) printf("\n Warning: Unexpected end of wights-file! l.rolling_mean - l.index = %d \n", l.index);
         read_bytes = fread(l.rolling_variance, sizeof(float), l.n, fp);

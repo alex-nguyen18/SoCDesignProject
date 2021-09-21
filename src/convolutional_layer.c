@@ -638,6 +638,7 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
         }
         else {
             l.scales = (float*)xcalloc(n, sizeof(float));
+            l.fixedscales = (INTYPE*)xcalloc(n, sizeof(INTYPE));
             for (i = 0; i < n; ++i) {
                 l.scales[i] = 1;
             }
@@ -1007,13 +1008,13 @@ void add_bias(OUTTYPE *output, OUTTYPE *biases, int batch, int n, int size)
     }
 }
 
-void scale_bias(float *output, float *scales, int batch, int n, int size)
+void scale_bias(OUTTYPE *output, const INTYPE *scales, int batch, int n, int size)
 {
     int i,j,b;
     for(b = 0; b < batch; ++b){
         for(i = 0; i < n; ++i){
             for(j = 0; j < size; ++j){
-                output[(b*n + i)*size + j] *= scales[i];
+                output[(b*n + i)*size + j] = fixed_shrink(output[(b*n + i)*size + j]) * scales[i];
             }
         }
     }
