@@ -277,6 +277,14 @@ void forward_network(network net, network_state state)
             scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
         }
         //double time = get_time_point();
+#ifdef DEBUG
+
+        printf("Layer %i input start\n", i);
+        for (int j = 0; j < 10; ++j) {
+            printf("%f\n", from_fixed(fixed_grow(state.input[j])));
+        }
+        printf("Layer %i input ennd\n", i);
+#endif
         l.forward(l, state);
         //printf("%d - Predicted in %lf mili-seconds.\n", i, ((double)get_time_point() - time) / 1000);
         int sz = l.out_h * l.out_w * l.out_c * l.batch;
@@ -286,6 +294,14 @@ void forward_network(network net, network_state state)
         for (int j = 0; j < sz; j++){
 		    state.input[j] = (l.output[j] >> SHAMT);
     	}
+#ifdef DEBUG
+        printf("Layer %i output start\n", i);
+        for (int j = 0; j < l.out_h * l.out_w * l.out_c * l.batch && j < 10; ++j) {
+            printf("%f\n", from_fixed(l.output[j]));
+        }
+        printf("Layer %i output ennd\n", i);
+#endif
+
         /*
         float avg_val = 0;
         int k;
@@ -1300,7 +1316,7 @@ void fuse_conv_batchnorm(network net)
                 for (f = 0; f < l->n; ++f)
                 {
                     l->biases[f] = l->biases[f] - (double)l->scales[f] * l->rolling_mean[f] / (sqrt((double)l->rolling_variance[f] + .00001));
-
+                    l->fixedbiases[f] = to_fixed_out(l->biases[f]);
                     double precomputed = l->scales[f] / (sqrt((double)l->rolling_variance[f] + .00001));
 
                     const size_t filter_size = l->size*l->size*l->c / l->groups;
@@ -1309,6 +1325,7 @@ void fuse_conv_batchnorm(network net)
                         int w_index = f*filter_size + i;
 
                         l->weights[w_index] *= precomputed;
+                        l->fixedweights[w_index] = to_fixed(l->weights[w_index]);
                     }
                 }
 

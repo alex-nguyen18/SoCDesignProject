@@ -2350,7 +2350,8 @@ void activate_array_cpu_custom(OUTTYPE *x, const int n, const ACTIVATION a)
     else if (a == LEAKY)
     {
         for (i = 0; i < n; ++i) {
-            x[i] = (x[i]>0) ? x[i] : ACTIVATION_SLOPE*x[i];
+            x[i] = (x[i]>0) ? x[i] : ACTIVATION_SLOPE*fixed_shrink(x[i]);
+            //x[i] = (x[i]>0) ? x[i] : (ACTIVATION_SLOPE*x[i]) >> SHAMT;
         }
     }
     else {
