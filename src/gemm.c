@@ -50,6 +50,70 @@ static inline int popcnt_64(uint64_t val64) {
 #define PUT_IN_REGISTER register
 #endif
 
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <unistd.h>
+
+#define READ_CMD  (0x0 << 31)
+#define WRITE_CMD (0x1 << 31)
+
+#define COMMAND_MASK 0x80000000
+#define SMUGGLE_ADDR 0x01000000
+
+int det_int = 0;
+
+// signal handler for receiving events from hardware driver
+void sighandler(int signo)
+{
+  if(signo==SIGIO)
+    {
+      det_int++;
+      printf("\nInterrupt detected\n");
+    }
+  return;
+}
+
+void initialise(int fd) {
+  unsigned long result;
+  for (int i = 0; i < 3; ++i) {
+    //ioctl(fd, SMUGGLE_ADDR + i, &result); // not a problem if it gets cut down since DRAM is in the low part of physical addr space
+    //ioctl(fd, WRITE_CMD + 16 + 4 * i, &result);
+    //printf("%d \n",result);
+  }
+}
+
+void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
+                    INTYPE *A, int lda,
+                    INTYPE *B, int ldb,
+                    float BETA,
+                    OUTTYPE *C, int ldc) {
+ 
+  int fd=open("/dev/fpga", O_RDWR); 
+  
+  unsigned long result;
+  ioctl(fd, WRITE_CMD + 4 + 0, &M);
+  ioctl(fd, WRITE_CMD + 4 + 4, &N);
+  ioctl(fd, WRITE_CMD + 4 + 8, &K);
+
+  write(fd,A,M*K*sizeof(INTYPE));
+  write(fd,B,K*N*sizeof(INTYPE));
+
+  result = 1;
+  ioctl(fd, WRITE_CMD + 0, &result); // start
+  
+  do {
+    ioctl(fd, READ_CMD + 0, &result); // check if finished
+  } while (result == 0);
+
+  read(fd,C,M*N*sizeof(OUTTYPE));
+
+  close(fd);
+}
+
 void gemm_bin(int M, int N, int K, float ALPHA,
         char  *A, int lda,
         float *B, int ldb,
@@ -106,14 +170,14 @@ void time_random_matrix(int TA, int TB, int m, int k, int n)
     free(c);
 }
 
-
+/*
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
         INTYPE *A, int lda,
         INTYPE *B, int ldb,
         float BETA,
         OUTTYPE *C, int ldc)
 {
-    
+    printf("%i %i %i %i %i %i\n",M,N,K,M*K,N*K,M*N);
     for (int i = 0; i < M; ++i) {
         for (int k = 0; k < K; ++k) {
             OUTTYPE A_PART = A[i * lda + k];
@@ -125,7 +189,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
 
     //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
-
+*/
 
 //--------------------------------------------
 // XNOR bitwise GEMM for binary neural network
