@@ -111,7 +111,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
   
 
   //////// Write A, B
-  int total_bytes_array=max(M*K*2, K*N*2);         // Larger of A,B will determine number of writes
+  int total_bytes_array=M>N?M*K*2:K*N*2;         // Larger of A,B will determine number of writes
   int total_blocks=total_bytes_array/FPGA_ABSIZE;  // Number of block writes
   int bytes_copied_a=0;                            // Tracking total bytes written
   int bytes_copied_b=0;
@@ -141,6 +141,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     bytes_copied_a += a_bytes;
     bytes_copied_b += b_bytes;
   }
+  printf("\tIn %d blocks:\n\\ttWrote %d bytes in A\n\t\tWrote %d bytes in B\n", total_blocks, bytes_copied_a, bytes_copied_b);
 
   //////// Tell GEMM to Start
   result = 1;
@@ -152,8 +153,24 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
   } while (result == 0);
 
   // Read Result
-  read(fd,C,M*N*sizeof(OUTTYPE));
-
+  //read(fd,C,M*N*sizeof(OUTTYPE));
+  total_bytes_array=M*N*4;
+  total_blocks=total_bytes_array/FPGA_CSIZE;
+  int bytes_copied_c=0;
+  int c_bytes;
+  result = 1;
+  for (int k=0; k<total_blocks; k++) {
+    c_bytes = FPGA_CSIZE<(M*N*4-bytes_copied_c)?FPGA_CSIZE:(M*N*4-bytes_copied_c);
+	 // Request a Block
+    ioctl(fd, WRITE_CMD + 48, &result);
+	 // Wait for response
+	 result = 0;
+    do {
+      ioctl(fd, READ_CMD + 48, &result); // check if finished
+    } while (result == 0);
+	 // Read
+	 read(fd,C+(k*FPGA_CSIZE),c_bytes);
+  }
   close(fd);
 }
 
