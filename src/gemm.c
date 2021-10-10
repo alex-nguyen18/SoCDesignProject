@@ -94,21 +94,64 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
  
   int fd=open("/dev/fpga", O_RDWR); 
   
+  //////// Write M, N, K
   unsigned long result;
   ioctl(fd, WRITE_CMD + 4 + 0, &M);
   ioctl(fd, WRITE_CMD + 4 + 4, &N);
   ioctl(fd, WRITE_CMD + 4 + 8, &K);
 
-  write(fd,A,M*K*sizeof(INTYPE));
-  write(fd,B,K*N*sizeof(INTYPE));
+  //////// Init the Accel to expect START of data block transfer
+  start = 1;
+  ioctl(fd, WRITE_CMD + 40, &start);
+  // Wait for init to finish
+  result = 0;
+  do {
+    ioctl(fd, READ_CMD + 40, &result); // check if finished
+  } while (result == 0);
+  
 
+  //////// Write A, B
+  int total_bytes_array=max(M*K*2, K*N*2);         // Larger of A,B will determine number of writes
+  int total_blocks=total_bytes_array/FPGA_ABSIZE;  // Number of block writes
+  int bytes_copied_a=0;                            // Tracking total bytes written
+  int bytes_copied_b=0;
+  int read_val=3;                                  // Tell accel what to read
+  for (int k=0; k<total_blocks; k++) {
+    // Write A, B
+    a_bytes = min(FPGA_ABSIZE, M*K*2-bytes_copied_a);
+    b_bytes = min(FPGA_ABSIZE, K*N*2-bytes_copied_b);
+    write(fd, A+(k*FPGA_ABSIZE), a_bytes);
+    write(fd, B+(k*FPGA_ABSIZE), b_bytes);
+    // Notify Accel to Read A or B
+    // Write 1 -- read A
+    // Write 2 -- read B
+    // Write 3 -- read A,B
+    read_val = 3;
+    if (a_bytes == 0 && b_bytes != 0) {
+      read_val = 2;
+    }
+    if (b_bytes == 0 && a_bytes != 0) {
+      read_val = 1;
+    }
+    ioctl(fd, WRITE_CMD + 44, &read_val); // start 
+    // Wait for accel finished notification
+    do {
+      ioctl(fd, READ_CMD + 44, &result); // check if finished
+    } while (result == 0);
+    bytes_copied_a += a_bytes;
+    bytes_copied_b += b_bytes;
+  }
+
+  //////// Tell GEMM to Start
   result = 1;
   ioctl(fd, WRITE_CMD + 0, &result); // start
   
+  //////// Wait for GEMM to finish 
   do {
     ioctl(fd, READ_CMD + 0, &result); // check if finished
   } while (result == 0);
 
+  // Read Result
   read(fd,C,M*N*sizeof(OUTTYPE));
 
   close(fd);
