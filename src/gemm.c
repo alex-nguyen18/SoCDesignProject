@@ -64,7 +64,7 @@ static inline int popcnt_64(uint64_t val64) {
 #define COMMAND_MASK 0x80000000
 #define SMUGGLE_ADDR 0x01000000
 #define FPGA_ABSIZE (2 * 1024 * 1024 * sizeof(INTYPE))
-#define FPGA_CSIZE  (4 * 1024 * 1024 * sizeof(INTYPE))
+#define FPGA_CSIZE  (4 * 1024 * 1024 * sizeof(OUTTYPE))
 
 int det_int = 0;
 
@@ -105,24 +105,9 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
             }
         }
     }
-    //printf("A %d %d %d %d\n",A[0],A[1],A[2],A[3]);
-    //printf("B %d %d %d %d\n",B[0],B[1],B[2],B[3]);
-    //printf("C %d %d %d %d\n",C[0],C[1],C[2],C[3]);
-    int a_sum = 0;
-    for (int c=0; c<M*K; c++) {
-	   a_sum = a_sum + A[c];
-	 }
-    printf("A sum: %d\n", a_sum);
-    int b_sum = 0;
-    for (int c=0; c<N*K; c++) {
-	   b_sum = b_sum + B[c];
-	 }
-    printf("B sum: %d\n", b_sum);
-
     //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 */
-
 
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
                     INTYPE *A, int lda,
@@ -153,15 +138,18 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
   int total_blocks=(total_bytes_array+(FPGA_ABSIZE-1))/FPGA_ABSIZE;  // Number of block writes  
   int bytes_copied_a=0;                            // Tracking total bytes written
   int bytes_copied_b=0;
-  int read_val=3;                                  // Tell accel what to read
+  unsigned long read_val=3;                                  // Tell accel what to read
   int a_bytes, b_bytes;
   printf("\tTotal A,B Blocks: %d\n", total_blocks);
   for (int k=0; k<total_blocks; k++) {
     // Write A, B
     a_bytes = FPGA_ABSIZE<(M*K*2-bytes_copied_a)?FPGA_ABSIZE:(M*K*2-bytes_copied_a);
-	 b_bytes = FPGA_ABSIZE<(K*N*2-bytes_copied_b)?FPGA_ABSIZE:(K*N*2-bytes_copied_b);	 
-    write(fd, A+(k*FPGA_ABSIZE), a_bytes);
-    write(fd, B+(k*FPGA_ABSIZE), b_bytes);
+	 b_bytes = FPGA_ABSIZE<(K*N*2-bytes_copied_b)?FPGA_ABSIZE:(K*N*2-bytes_copied_b);
+	 if(k==1 && M==16){
+	   printf("\n\n============== %i ==============\n\n", B[2097152]);
+	 }
+    write(fd, A+(k*FPGA_ABSIZE/2), a_bytes);
+    write(fd, B+(k*FPGA_ABSIZE/2), b_bytes);
     // Notify Accel to Read A or B
     // Write 1 -- read A
     // Write 2 -- read B
@@ -213,6 +201,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
   }
   close(fd);
 }
+
 
 void gemm_bin(int M, int N, int K, float ALPHA,
         char  *A, int lda,
