@@ -63,6 +63,8 @@ static inline int popcnt_64(uint64_t val64) {
 
 #define COMMAND_MASK 0x80000000
 #define SMUGGLE_ADDR 0x01000000
+#define FPGA_ABSIZE (2 * 1024 * 1024 * sizeof(INTYPE))
+#define FPGA_CSIZE  (4 * 1024 * 1024 * sizeof(INTYPE))
 
 int det_int = 0;
 
@@ -86,6 +88,42 @@ void initialise(int fd) {
   }
 }
 
+/*
+void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
+        INTYPE *A, int lda,
+        INTYPE *B, int ldb,
+        float BETA,
+        OUTTYPE *C, int ldc)
+{
+    printf("M: %i\nN: %i\nK: %i\n", M, N, K);
+	 //printf("%i %i %i %i %i %i\n",M,N,K,M*K,N*K,M*N);
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            OUTTYPE A_PART = A[i * lda + k];
+            for (int j = 0; j < N; ++j) {
+                C[i*ldc + j] += (A_PART*B[k*ldb + j]);// >> SHAMT;
+            }
+        }
+    }
+    //printf("A %d %d %d %d\n",A[0],A[1],A[2],A[3]);
+    //printf("B %d %d %d %d\n",B[0],B[1],B[2],B[3]);
+    //printf("C %d %d %d %d\n",C[0],C[1],C[2],C[3]);
+    int a_sum = 0;
+    for (int c=0; c<M*K; c++) {
+	   a_sum = a_sum + A[c];
+	 }
+    printf("A sum: %d\n", a_sum);
+    int b_sum = 0;
+    for (int c=0; c<N*K; c++) {
+	   b_sum = b_sum + B[c];
+	 }
+    printf("B sum: %d\n", b_sum);
+
+    //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
+}
+*/
+
+
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
                     INTYPE *A, int lda,
                     INTYPE *B, int ldb,
@@ -101,25 +139,27 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
   ioctl(fd, WRITE_CMD + 4 + 8, &K);
 
   //////// Init the Accel to expect START of data block transfer
-  start = 1;
+  int start = 1;
   ioctl(fd, WRITE_CMD + 40, &start);
   // Wait for init to finish
   result = 0;
   do {
     ioctl(fd, READ_CMD + 40, &result); // check if finished
-  } while (result == 0);
-  
+  } while (result == 0); 
+  printf("\nAccelerator initilized!\n");
 
   //////// Write A, B
   int total_bytes_array=M>N?M*K*2:K*N*2;         // Larger of A,B will determine number of writes
-  int total_blocks=total_bytes_array/FPGA_ABSIZE;  // Number of block writes
+  int total_blocks=(total_bytes_array+(FPGA_ABSIZE-1))/FPGA_ABSIZE;  // Number of block writes  
   int bytes_copied_a=0;                            // Tracking total bytes written
   int bytes_copied_b=0;
   int read_val=3;                                  // Tell accel what to read
+  int a_bytes, b_bytes;
+  printf("\tTotal A,B Blocks: %d\n", total_blocks);
   for (int k=0; k<total_blocks; k++) {
     // Write A, B
-    a_bytes = min(FPGA_ABSIZE, M*K*2-bytes_copied_a);
-    b_bytes = min(FPGA_ABSIZE, K*N*2-bytes_copied_b);
+    a_bytes = FPGA_ABSIZE<(M*K*2-bytes_copied_a)?FPGA_ABSIZE:(M*K*2-bytes_copied_a);
+	 b_bytes = FPGA_ABSIZE<(K*N*2-bytes_copied_b)?FPGA_ABSIZE:(K*N*2-bytes_copied_b);	 
     write(fd, A+(k*FPGA_ABSIZE), a_bytes);
     write(fd, B+(k*FPGA_ABSIZE), b_bytes);
     // Notify Accel to Read A or B
@@ -141,24 +181,23 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     bytes_copied_a += a_bytes;
     bytes_copied_b += b_bytes;
   }
-  printf("\tIn %d blocks:\n\\ttWrote %d bytes in A\n\t\tWrote %d bytes in B\n", total_blocks, bytes_copied_a, bytes_copied_b);
+  printf("\tIn %d blocks:\n\t\tWrote %d bytes in A\n\t\tWrote %d bytes in B\n", total_blocks, bytes_copied_a, bytes_copied_b);
 
-  //////// Tell GEMM to Start
+  //////// Tell GEMM to Run and Wait for Finish
   result = 1;
   ioctl(fd, WRITE_CMD + 0, &result); // start
-  
-  //////// Wait for GEMM to finish 
   do {
     ioctl(fd, READ_CMD + 0, &result); // check if finished
   } while (result == 0);
 
-  // Read Result
+  //////// Read Result from DRAM block by block
   //read(fd,C,M*N*sizeof(OUTTYPE));
   total_bytes_array=M*N*4;
-  total_blocks=total_bytes_array/FPGA_CSIZE;
+  total_blocks=(total_bytes_array+(FPGA_CSIZE-1))/FPGA_CSIZE;  // Number of block writes    
   int bytes_copied_c=0;
   int c_bytes;
   result = 1;
+  printf("\tTotal C Blocks: %d\n", total_blocks);  
   for (int k=0; k<total_blocks; k++) {
     c_bytes = FPGA_CSIZE<(M*N*4-bytes_copied_c)?FPGA_CSIZE:(M*N*4-bytes_copied_c);
 	 // Request a Block
@@ -170,6 +209,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     } while (result == 0);
 	 // Read
 	 read(fd,C+(k*FPGA_CSIZE),c_bytes);
+    bytes_copied_c += c_bytes;
   }
   close(fd);
 }
