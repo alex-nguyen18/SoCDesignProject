@@ -196,7 +196,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
       ioctl(fd, READ_CMD + 48, &result); // check if finished
     } while (result == 0);
 	 // Read
-	 read(fd,C+(k*FPGA_CSIZE),c_bytes);
+	 read(fd,C+(k*FPGA_CSIZE/4),c_bytes);
     bytes_copied_c += c_bytes;
   }
   close(fd);
