@@ -123,9 +123,9 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     OUTTYPE *Cf;
 
     //// Padding
-    M_new = M + (32 - (M % 32));
-    N_new = N + (8 - (N % 8));
-    K_new = K + (8 - (K % 8));
+    int M_new = M + (32 - (M % 32));
+    int N_new = N + (8 - (N % 8));
+    int K_new = K + (8 - (K % 8));
 
     Af = malloc(M_new * K_new * sizeof(INTYPE));
     Bf = malloc(K_new * N_new * sizeof(INTYPE));
