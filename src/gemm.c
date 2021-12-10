@@ -126,6 +126,33 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     Cf = calloc(M * N, sizeof(OUTTYPE));
     assert(Af && Bf && Cf);
 
+    //// Padding
+    M_new = M + (32 - (M % 32));
+    N_new = N + (8 - (N % 8));
+    K_new = K + (8 - (K % 8));
+    // Pad A
+    for (int m = 0; m < M_new; m++) {
+        for (int k=0; k < K_new; k++) {
+            if(k < K && m < M) {
+                Af[m*K_new + k] = A[m*K + k];
+            } else {
+                Af[m*K_new + k] = 0;
+            }
+        }
+    }
+
+    // Pad B
+    for (int k = 0; k < K_new; k++) {
+        for (int n=0; n < N_new; n++) {
+            if(n < N && k < K) {
+                Bf[k*N_new + n] = B[k*N + n];
+            } else {
+                Bf[k*N_new + n] = 0;
+            }
+        }
+    }
+
+///////// CODE TO BE REPLACED ///////
     for (int i = 0; i < M; ++i) {
         for (int k = 0; k < K; ++k) {
             Af[i * lda + k] = to_fixed(A[i * lda + k]);
@@ -160,6 +187,17 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
 //#endif
         }
     }
+///////// CODE TO BE REPLACED ///////
+  
+    // Remove Padding C
+    for (int m = 0; m < M_new; m++) {
+        for (int n=0; n < N_new; n++) {
+            if(n < N && m < M) {
+                C[m*N + n] = Cf[m*N_new + n];
+            }
+        }
+    }
+    
 
     free(Af);
     free(Bf);
