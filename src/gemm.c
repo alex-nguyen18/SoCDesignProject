@@ -127,17 +127,17 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     int N_new = N + (8 - (N % 8));
     int K_new = K + (8 - (K % 8));
 
-    Af = malloc(M_new * K_new * sizeof(INTYPE));
-    Bf = malloc(K_new * N_new * sizeof(INTYPE));
-    Cf = calloc(M_new * N_new, sizeof(OUTTYPE));
+    Af = malloc(M_new * K_new * sizeof(INTYPE)); 
+	 Bf = malloc(K_new * N_new * sizeof(INTYPE));
+	 Cf = calloc(M_new * N_new, sizeof(OUTTYPE));
     assert(Af && Bf && Cf);
 
 
     // Pad A
-    for (int m = 0; m < M_new; m++) {
-        for (int k=0; k < K_new; k++) {
+    for (int m = 0; m < M_new; ++m) {
+        for (int k=0; k < K_new; ++k) {
             if(k < K && m < M) {
-                Af[m*K_new + k] = A[m*K + k];
+                Af[m*K_new + k] = to_fixed(A[m*K + k]);
             } else {
                 Af[m*K_new + k] = 0;
             }
@@ -145,63 +145,35 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     }
 
     // Pad B
-    for (int k = 0; k < K_new; k++) {
-        for (int n=0; n < N_new; n++) {
+    for (int k = 0; k < K_new; ++k) {
+        for (int n=0; n < N_new; ++n) {
             if(n < N && k < K) {
-                Bf[k*N_new + n] = B[k*N + n];
+                Bf[k*N_new + n] = to_fixed(B[k*N + n]);
             } else {
                 Bf[k*N_new + n] = 0;
             }
         }
     }
 
-///////// CODE TO BE REPLACED ///////
-    for (int i = 0; i < M; ++i) {
-        for (int k = 0; k < K; ++k) {
-            Af[i * lda + k] = to_fixed(A[i * lda + k]);
-//#ifdef DEBUG
-//            printf("A %i %i %f -> %i \n", i, k, A[i * lda + k], Af[i * lda + k]);
-//#endif
-        }
-    }
-    for (int k = 0; k < K; ++k) {
-        for (int j = 0; j < N; ++j) {
-            Bf[k*ldb + j] = to_fixed(B[k*ldb + j]);
-//#ifdef DEBUG
-//            printf("B %i %i %f -> %i \n", k, j, B[k*ldb + j], Bf[k*ldb + j]);
-//#endif
-        }
-    }
-
-    for (int i = 0; i < M; ++i) {
-        for (int k = 0; k < K; ++k) {
+    // Run GEMM
+    for (int i = 0; i < M_new; ++i) {
+        for (int k = 0; k < K_new; ++k) {
             OUTTYPE A_PART = Af[i * lda + k];
-            for (int j = 0; j < N; ++j) {
+            for (int j = 0; j < N_new; ++j) {
                 Cf[i*ldc + j] += (A_PART*Bf[k*ldb + j]);// >> SHAMT;
             }
         }
     }
 
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            C[i*ldc + j] = from_fixed(Cf[i * ldc  + j]);
-//#ifdef DEBUG
-//            printf("C %i %i %i -> %f \n", i, j, Cf[i * ldc  + j], C[i*ldc + j]);
-//#endif
-        }
-    }
-///////// CODE TO BE REPLACED ///////
-  
     // Remove Padding C
-    for (int m = 0; m < M_new; m++) {
-        for (int n=0; n < N_new; n++) {
+    for (int m = 0; m < M_new; ++m) {
+        for (int n=0; n < N_new; ++n) {
             if(n < N && m < M) {
-                C[m*N + n] = Cf[m*N_new + n];
+                C[m*N + n] = from_fixed(Cf[m*N_new + n]);
             }
         }
     }
     
-
     free(Af);
     free(Bf);
     free(Cf);
