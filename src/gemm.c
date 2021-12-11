@@ -9,6 +9,10 @@
 #include <string.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #define READ_CMD  (0x0U << 31)
 #define WRITE_CMD (0x1U << 31)
@@ -197,6 +201,8 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
         }
     }
 
+printf("padded A\n");
+
     // Pad B
     for (int k = 0; k < K_new; ++k) {
         for (int n=0; n < N_new; ++n) {
@@ -208,10 +214,12 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
         }
     }
 
+printf("padded A\n");
 //HAL
 
   if((write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE)) || (write(fd, Bf, N_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE))){
 		printf("Could not write A and B in kernel!\n");
+		close(fd);
 		exit(1);
   }
 
