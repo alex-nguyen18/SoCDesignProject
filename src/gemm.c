@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
+#include <signal.h>
 
 #define READ_CMD  (0x0U << 31)
 #define WRITE_CMD (0x1U << 31)
@@ -116,7 +118,7 @@ void time_random_matrix(int TA, int TB, int m, int k, int n)
     free(c);
 }
 
-static int fd = 0;
+static int fd = -1;
 
 void gemm_software(int TA, int TB, int M, int N, int K, float ALPHA,
         float *A, int lda,
@@ -166,11 +168,22 @@ void gemm_software(int TA, int TB, int M, int N, int K, float ALPHA,
 
 }
 
+static int det_int = 0;
+
+void sighandler(int signo)
+{
+	if(signo==SIGIO){
+		det_int++;
+		printf("\nInterrupt detected\n");
+	}
+	    return;
+}
+
 void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
 
-    if(!fd){
+    if(fd < 0){
 		fd=open("/dev/fpga", O_RDWR);
-		if(!fd){
+		if(fd < 0){
 		    printf("Could not open /dev/fpga!\n");
 		    exit(1);
 		}
@@ -179,6 +192,16 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
     	}
     INTYPE *Af, *Bf;
     OUTTYPE *Cf;
+//    unsigned long volatile gie, iie;
+    struct sigaction action;
+
+    sigemptyset(&action.sa_mask);
+    sigaddset(&action.sa_mask, SIGIO);
+
+    action.sa_handler = sighandler;
+    action.sa_flags = 0;
+
+    sigaction(SIGIO, &action, NULL);
 
     //// Padding
     int M_new = !(M % 32) ? M : M + (32 - (M % 32));
@@ -217,8 +240,12 @@ printf("padded A\n");
 printf("padded A\n");
 //HAL
 
-  if((write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE)) || (write(fd, Bf, N_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE))){
-		printf("Could not write A and B in kernel!\n");
+  if((write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE))){
+		printf("Could not write A in kernel!\n");
+		close(fd);
+		exit(1); 
+  }else if ((write(fd, Bf, N_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE))){
+		printf("Could not write B in kernel!\n");
 		close(fd);
 		exit(1);
   }
@@ -271,7 +298,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     assert(ALPHA == 1.0);
 
 	//turn off stuff using this flag  VVVVV
-   if(M > 1024 || N > 1024 || K > 1024 || false){
+   if(M > 512 || N > 512 || K > 512 || false){
 	//call gemm software
 	gemm_software(TA, TB, M, N, K, ALPHA,
         A, lda,
