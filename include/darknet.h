@@ -34,11 +34,11 @@
 #endif
 #endif
 
-#define INTYPE int32_t
+#define INTYPE int16_t
 #define OUTTYPE int32_t
 
-#define MAXVALUEFIX (INT32_MAX)
-#define SHAMT (12)
+#define MAXVALUEFIX (INT16_MAX)
+#define SHAMT (10)
 #define MAXVALUE ((float)MAXVALUEFIX * (1.0f / (1 << SHAMT)))
 // SHAMT = log2()
 
