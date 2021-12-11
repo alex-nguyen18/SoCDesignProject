@@ -107,18 +107,67 @@ void time_random_matrix(int TA, int TB, int m, int k, int n)
     free(c);
 }
 
+static int fd = 0;
 
-void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
+void gemm_software(int TA, int TB, int M, int N, int K, float ALPHA,
         float *A, int lda,
         float *B, int ldb,
         float BETA,
-        float *C, int ldc)
-{
-    assert(K == lda);
-    assert(N == ldb);
-    assert(N == ldc);
-    assert(ALPHA == 1.0);
+        float *C, int ldc){
 
+    INTYPE *Af, *Bf;
+    OUTTYPE *Cf;
+    Af = malloc(M * K * sizeof(INTYPE));
+    Bf = malloc(K * N * sizeof(INTYPE));
+    Cf = calloc(M * N, sizeof(OUTTYPE));
+    assert(Af && Bf && Cf);
+
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            Af[i * lda + k] = to_fixed(A[i * lda + k]);
+
+        }
+    }
+    for (int k = 0; k < K; ++k) {
+        for (int j = 0; j < N; ++j) {
+            Bf[k*ldb + j] = to_fixed(B[k*ldb + j]);
+
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int k = 0; k < K; ++k) {
+            OUTTYPE A_PART = Af[i * lda + k];
+            for (int j = 0; j < N; ++j) {
+                Cf[i*ldc + j] += (A_PART*Bf[k*ldb + j]);
+            }
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            C[i*ldc + j] = from_fixed(Cf[i * ldc  + j]);
+
+        }
+    }
+
+    free(Af);
+    free(Bf);
+    free(Cf);
+
+}
+
+void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
+
+    if(!fd){
+		fd=open("/dev/fpga", O_RDWR);
+		if(!fd){
+		    printf("Could not open /dev/fpga!\n");
+		    exit(1);
+		}
+		fcntl(fd, F_SETOWN, getpid());
+		fcntl(fd, F_SETFL, fcntl(fd, F_GETFL)|O_ASYNC);
+    	}
     INTYPE *Af, *Bf;
     OUTTYPE *Cf;
 
@@ -128,10 +177,9 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     int K_new = K + (8 - (K % 8));
 
     Af = malloc(M_new * K_new * sizeof(INTYPE)); 
-	 Bf = malloc(K_new * N_new * sizeof(INTYPE));
-	 Cf = calloc(M_new * N_new, sizeof(OUTTYPE));
+    Bf = malloc(K_new * N_new * sizeof(INTYPE));
+    Cf = calloc(M_new * N_new, sizeof(OUTTYPE));
     assert(Af && Bf && Cf);
-
 
     // Pad A
     for (int m = 0; m < M_new; ++m) {
@@ -155,16 +203,31 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
         }
     }
 
-    // Run GEMM
-    for (int i = 0; i < M_new; ++i) {
-        for (int k = 0; k < K_new; ++k) {
-            OUTTYPE A_PART = Af[i * K_new + k];
-            for (int j = 0; j < N_new; ++j) {
-                Cf[i*N_new + j] += (A_PART*Bf[k*N_new + j]);// >> SHAMT;
-            }
-        }
-    }
+//HAL
 
+  if(write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE) || write(fd, Bf, M_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE)){
+		printf("Could not write A and B in kernel!\n");
+		exit(1);
+  }
+
+  ioctl(fd, WRITE_CMD + 52 + 0, &M_new);
+  ioctl(fd, WRITE_CMD + 52 + 8, &N_new);
+  ioctl(fd, WRITE_CMD + 52 + 16, &K_new);
+ 
+  //////// Tell GEMM to Run and Wait for Finish
+  result = 1;
+  ioctl(fd, WRITE_CMD + 0, &result); // start
+  do {
+    ioctl(fd, READ_CMD + 0, &result); // check if finished
+    //printf("We are not finished with GEMM!!\n");
+    //    //fflush(stdout);
+     } while ((result & 2) == 0);
+
+    if(read(fd, Cf, M_new*N_new*sizeof(OUTTYPE)) != M_new*N_new*sizeof(OUTTYPE)){
+        	printf("did not copy C correctly!\n");
+       		close(fd);
+        	exit(-1);
+    }
     // Remove Padding C
     for (int m = 0; m < M_new; ++m) {
         for (int n=0; n < N_new; ++n) {
@@ -178,7 +241,33 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     free(Bf);
     free(Cf);
 
-    //gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
+}
+
+void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
+        float *A, int lda,
+        float *B, int ldb,
+        float BETA,
+        float *C, int ldc)
+{
+
+    assert(K == lda);
+    assert(N == ldb);
+    assert(N == ldc);
+    assert(ALPHA == 1.0);
+
+	//turn off stuff using this flag  VVVVV
+   if(M > 2048 || N > 2048 || K > 2048 || false){
+	//call gemm software
+	gemm_software(TA, TB, M, N, K, ALPHA,
+        *A, lda,
+        *B, ldb,
+        BETA,
+        *C, ldc);
+	return;
+   }else{		
+	gemm_hardware(M, N, K, A, B, C);
+   }
+ 
 }
 
 
