@@ -314,7 +314,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     assert(ALPHA == 1.0);
 
 	//turn off stuff using this flag  VVVVV
-   if(M > 1024 || N > 1024 || K > 2048 || false){
+   if(M > 1024 || N > 1024 || K > 2048 || true){
 	//call gemm software
 	gemm_software(TA, TB, M, N, K, ALPHA,
         A, lda,
