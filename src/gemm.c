@@ -158,9 +158,9 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     // Run GEMM
     for (int i = 0; i < M_new; ++i) {
         for (int k = 0; k < K_new; ++k) {
-            OUTTYPE A_PART = Af[i * lda + k];
+            OUTTYPE A_PART = Af[i * K_new + k];
             for (int j = 0; j < N_new; ++j) {
-                Cf[i*ldc + j] += (A_PART*Bf[k*ldb + j]);// >> SHAMT;
+                Cf[i*N_new + j] += (A_PART*Bf[k*N_new + j]);// >> SHAMT;
             }
         }
     }
