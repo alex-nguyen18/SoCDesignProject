@@ -165,7 +165,7 @@ void gemm_software(int TA, int TB, int M, int N, int K, float ALPHA,
     free(Af);
     free(Bf);
     free(Cf);
-
+    return;
 }
 
 static int det_int = 0;
@@ -178,6 +178,8 @@ void sighandler(int signo)
 	}
 	    return;
 }
+
+
 
 void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
 
@@ -195,22 +197,28 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
 //    unsigned long volatile gie, iie;
     struct sigaction action;
 
-    sigemptyset(&action.sa_mask);
+   sigemptyset(&action.sa_mask);
     sigaddset(&action.sa_mask, SIGIO);
 
     action.sa_handler = sighandler;
     action.sa_flags = 0;
 
-    sigaction(SIGIO, &action, NULL);
+   sigaction(SIGIO, &action, NULL);
 
+   Af = malloc(1024 * 1024 * sizeof(INTYPE)); 
+   Bf =  malloc(1024 * 1024 * sizeof(INTYPE)); 
+   Cf = calloc(1024 * 1024, sizeof(OUTTYPE));
     //// Padding
-    int M_new = !(M % 32) ? M : M + (32 - (M % 32));
-    int N_new = !(N % 8) ? N : N + (8 - (N % 8));
-    int K_new = !(K % 8) ? K : K + (8 - (K % 8));
+//    int M_new = !(M % 32) ? M : M + (32 - (M % 32));
+//    int N_new = !(N % 8) ? N : N + (8 - (N % 8));
+//    int K_new = !(K % 8) ? K : K + (8 - (K % 8));
 
-    Af = malloc(M_new * K_new * sizeof(INTYPE)); 
-    Bf = malloc(K_new * N_new * sizeof(INTYPE));
-    Cf = calloc(M_new * N_new, sizeof(OUTTYPE));
+    int M_new = !(M % 32) ? M : M + (32 - (M % 32));
+    int N_new = !(N % 32) ? N : N + (32 - (N % 32));
+    int K_new = !(K % 32) ? K : K + (32 - (K % 32));
+
+    printf("Mn%d Nn%d Kn%d\n",M_new, N_new, K_new);
+
     assert(Af && Bf && Cf);
 
     // Pad A
@@ -237,7 +245,7 @@ printf("padded A\n");
         }
     }
 
-printf("padded A\n");
+printf("padded B\n");
 //HAL
 
   if((write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE))){
@@ -250,9 +258,15 @@ printf("padded A\n");
 		exit(1);
   }
 
-  ioctl(fd, WRITE_CMD + 52 + 0, &M_new);
-  ioctl(fd, WRITE_CMD + 52 + 8, &N_new);
-  ioctl(fd, WRITE_CMD + 52 + 16, &K_new);
+  ioctl(fd, WRITE_CMD + 0x10, &M_new);
+  ioctl(fd, WRITE_CMD + 0x18, &N_new);
+  ioctl(fd, WRITE_CMD + 0x20, &K_new);
+
+  printf("WROTE MNEW< KNEW< NNEW\n");
+
+//  ioctl(fd, WRITE_CMD + 52 + 0, &M_new);
+//  ioctl(fd, WRITE_CMD + 52 + 8, &N_new);
+//  ioctl(fd, WRITE_CMD + 52 + 16, &K_new);
  
   //////// Tell GEMM to Run and Wait for Finish
   int result = 1;
@@ -261,13 +275,16 @@ printf("padded A\n");
     ioctl(fd, READ_CMD + 0, &result); // check if finished
     //printf("We are not finished with GEMM!!\n");
     //    //fflush(stdout);
-     } while ((result & 2) == 0);
+  } while ((result & 2) == 0);
 
     if(read(fd, Cf, M_new*N_new*sizeof(OUTTYPE)) != M_new*N_new*sizeof(OUTTYPE)){
         	printf("did not copy C correctly!\n");
        		close(fd);
         	exit(-1);
     }
+
+    printf("read some stuff from C\n");
+
     // Remove Padding C
     for (int m = 0; m < M_new; ++m) {
         for (int n=0; n < N_new; ++n) {
@@ -276,11 +293,10 @@ printf("padded A\n");
             }
         }
     }
-    
-    free(Af);
-    free(Bf);
-    free(Cf);
-
+   printf("Removing C padding\n"); 
+//    free(Af);
+//    free(Bf);
+//    free(Cf);
 }
 
 void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
@@ -298,7 +314,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     assert(ALPHA == 1.0);
 
 	//turn off stuff using this flag  VVVVV
-   if(M > 512 || N > 512 || K > 512 || false){
+   if(M > 1024 || N > 1024 || K > 1024 || false){
 	//call gemm software
 	gemm_software(TA, TB, M, N, K, ALPHA,
         A, lda,
@@ -308,6 +324,8 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
 	return;
    }else{		
 	gemm_hardware(M, N, K, A, B, C);
+	printf("we have returned from hardware!\n");
+	return;
    }
  
 }
