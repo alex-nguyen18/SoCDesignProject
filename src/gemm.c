@@ -8,6 +8,11 @@
 #include <float.h>
 #include <string.h>
 #include <stdint.h>
+#include <fcntl.h>
+
+#define READ_CMD  (0x0U << 31)
+#define WRITE_CMD (0x1U << 31)
+
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
@@ -172,9 +177,9 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
     OUTTYPE *Cf;
 
     //// Padding
-    int M_new = M + (32 - (M % 32));
-    int N_new = N + (8 - (N % 8));
-    int K_new = K + (8 - (K % 8));
+    int M_new = !(M % 32) ? M : M + (32 - (M % 32));
+    int N_new = !(N % 8) ? N : N + (8 - (N % 8));
+    int K_new = !(K % 8) ? K : K + (8 - (K % 8));
 
     Af = malloc(M_new * K_new * sizeof(INTYPE)); 
     Bf = malloc(K_new * N_new * sizeof(INTYPE));
@@ -205,7 +210,7 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
 
 //HAL
 
-  if(write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE) || write(fd, Bf, M_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE)){
+  if((write(fd, Af, M_new*K_new*sizeof(INTYPE)) != M_new*K_new*sizeof(INTYPE)) || (write(fd, Bf, N_new*K_new*sizeof(INTYPE)) != K_new*N_new*sizeof(INTYPE))){
 		printf("Could not write A and B in kernel!\n");
 		exit(1);
   }
@@ -215,7 +220,7 @@ void gemm_hardware(int M, int N, int K, float *A, float *B, float *C){
   ioctl(fd, WRITE_CMD + 52 + 16, &K_new);
  
   //////// Tell GEMM to Run and Wait for Finish
-  result = 1;
+  int result = 1;
   ioctl(fd, WRITE_CMD + 0, &result); // start
   do {
     ioctl(fd, READ_CMD + 0, &result); // check if finished
@@ -250,19 +255,21 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
         float *C, int ldc)
 {
 
+	printf("m%d n%d k%d\n",M,N,K);
+
     assert(K == lda);
     assert(N == ldb);
     assert(N == ldc);
     assert(ALPHA == 1.0);
 
 	//turn off stuff using this flag  VVVVV
-   if(M > 2048 || N > 2048 || K > 2048 || false){
+   if(M > 1024 || N > 1024 || K > 1024 || false){
 	//call gemm software
 	gemm_software(TA, TB, M, N, K, ALPHA,
-        *A, lda,
-        *B, ldb,
+        A, lda,
+        B, ldb,
         BETA,
-        *C, ldc);
+        C, ldc);
 	return;
    }else{		
 	gemm_hardware(M, N, K, A, B, C);
